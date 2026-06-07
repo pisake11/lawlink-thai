@@ -1,0 +1,1159 @@
+
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LawLink Thai - แพลตฟอร์มค้นหาและปรึกษาทนายความ</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Prompt -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- App State Container (using Alpine.js style pure JS for reactivity) -->
+    <div id="app" class="flex flex-col min-h-screen">
+        
+        <!-- Header / Navigation -->
+        <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-16">
+                    <!-- Logo -->
+                    <div class="flex items-center space-x-3 cursor-pointer" onclick="changeTab('home')">
+                        <div class="bg-blue-900 text-white p-2 rounded-lg flex items-center justify-center">
+                            <i class="fa-solid fa-scale-balanced text-xl"></i>
+                        </div>
+                        <div>
+                            <span class="text-xl font-bold text-blue-900 tracking-tight">LawLink Thai</span>
+                            <span class="block text-xs text-slate-400">ภิเษก's Workspace</span>
+                        </div>
+                    </div>
+
+                    <!-- Desktop Navigation Links -->
+                    <nav class="hidden md:flex space-x-8">
+                        <button onclick="changeTab('home')" id="nav-home" class="text-blue-900 border-b-2 border-blue-900 px-1 py-2 text-sm font-medium transition-colors">ค้นหาทนายความ</button>
+                        <button onclick="changeTab('escrow')" id="nav-escrow" class="text-slate-500 hover:text-blue-900 px-1 py-2 text-sm font-medium transition-colors">ระบบคนกลางถือเงิน (Escrow)</button>
+                        <button onclick="changeTab('register')" id="nav-register" class="text-slate-500 hover:text-blue-900 px-1 py-2 text-sm font-medium transition-colors">สมัครเป็นทนาย</button>
+                        <button onclick="changeTab('admin')" id="nav-admin" class="text-slate-500 hover:text-blue-900 px-1 py-2 text-sm font-medium transition-colors">
+                            แดชบอร์ดผู้ดูแล <span class="bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded-full font-semibold">Admin</span>
+                        </button>
+                    </nav>
+
+                    <!-- User Role Simulator & Status -->
+                    <div class="flex items-center space-x-4">
+                        <div class="hidden lg:block text-right">
+                            <span class="block text-xs text-slate-400">บทบาทจำลอง</span>
+                            <select id="roleSelector" onchange="switchRole(this.value)" class="text-xs font-semibold bg-slate-100 border border-slate-300 rounded px-2 py-1 text-slate-700 focus:outline-none">
+                                <option value="client">ลูกความ (ผู้ใช้งาน)</option>
+                                <option value="lawyer">ทนายความ (สมศักดิ์)</option>
+                                <option value="admin">ผู้ดูแลระบบ (Admin)</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center space-x-2 bg-slate-100 px-3 py-1.5 rounded-full text-slate-700 text-sm">
+                            <i class="fa-solid fa-wallet text-emerald-600"></i>
+                            <span class="font-semibold" id="userWallet">15,000 บาท</span>
+                        </div>
+                        <button class="bg-red-50 hover:bg-red-100 text-red-600 p-2 rounded-lg text-sm transition-colors" title="ออกจากระบบ" onclick="resetApp()">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+            
+            <!-- ALERT / SYSTEM BANNER -->
+            <div id="statusAlert" class="hidden mb-6 p-4 rounded-xl flex items-center justify-between border">
+                <div class="flex items-center space-x-3">
+                    <div id="alertIcon" class="p-2 rounded-lg text-white"></div>
+                    <div>
+                        <h4 id="alertTitle" class="font-bold text-sm"></h4>
+                        <p id="alertDesc" class="text-xs text-slate-600 mt-0.5"></p>
+                    </div>
+                </div>
+                <button onclick="closeAlert()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <!-- TAB: HOME / SEARCH LAWYERS -->
+            <div id="tab-home" class="tab-content">
+                <!-- Hero Header -->
+                <div class="text-center max-w-2xl mx-auto mb-10">
+                    <h1 class="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">ค้นหา<span class="text-blue-900">ทนายความ</span>ที่ใช่</h1>
+                    <p class="mt-2 text-slate-500">ค้นหาทนายความผู้เชี่ยวชาญด้านกฎหมายแพ่งและกฎหมายอาญา พร้อมดูรีวิว คะแนน และการรับรองความน่าเชื่อถือผ่านระบบคนกลาง</p>
+                </div>
+
+                <!-- Metrics Dashboard -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
+                        <div class="p-3 bg-blue-50 text-blue-900 rounded-xl"><i class="fa-solid fa-users text-2xl"></i></div>
+                        <div>
+                            <span class="block text-2xl font-bold text-slate-900" id="totalLawyersCount">11</span>
+                            <span class="text-xs text-slate-400">ทนายความทั้งหมด</span>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
+                        <div class="p-3 bg-sky-50 text-sky-600 rounded-xl"><i class="fa-solid fa-gavel text-2xl"></i></div>
+                        <div>
+                            <span class="block text-2xl font-bold text-sky-600" id="civilLawyersCount">6</span>
+                            <span class="text-xs text-slate-400">กฎหมายแพ่ง</span>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
+                        <div class="p-3 bg-rose-50 text-rose-600 rounded-xl"><i class="fa-solid fa-shield-halved text-2xl"></i></div>
+                        <div>
+                            <span class="block text-2xl font-bold text-rose-600" id="criminalLawyersCount">5</span>
+                            <span class="text-xs text-slate-400">กฎหมายอาญา</span>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
+                        <div class="p-3 bg-amber-50 text-amber-500 rounded-xl"><i class="fa-solid fa-star text-2xl"></i></div>
+                        <div>
+                            <span class="block text-2xl font-bold text-amber-500">4.8</span>
+                            <span class="text-xs text-slate-400">คะแนนรีวิวเฉลี่ย</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search and Filter Section -->
+                <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div class="relative flex-grow">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-3.5 text-slate-400"></i>
+                        <input type="text" id="searchInput" oninput="filterLawyers()" placeholder="ค้นหาชื่อทนายความ, ความเชี่ยวชาญ..." class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-900 focus:border-transparent text-sm">
+                    </div>
+                    <div class="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
+                        <button onclick="setSpecialtyFilter('all')" id="filter-all" class="px-4 py-2 rounded-xl text-sm font-medium transition-all bg-blue-950 text-white whitespace-nowrap">ทั้งหมด</button>
+                        <button onclick="setSpecialtyFilter('civil')" id="filter-civil" class="px-4 py-2 rounded-xl text-sm font-medium transition-all bg-slate-100 hover:bg-slate-200 text-slate-700 whitespace-nowrap"><i class="fa-solid fa-scale-balanced mr-1.5 text-blue-600"></i>กฎหมายแพ่ง</button>
+                        <button onclick="setSpecialtyFilter('criminal')" id="filter-criminal" class="px-4 py-2 rounded-xl text-sm font-medium transition-all bg-slate-100 hover:bg-slate-200 text-slate-700 whitespace-nowrap"><i class="fa-solid fa-handcuffs mr-1.5 text-red-600"></i>กฎหมายอาญา</button>
+                    </div>
+                </div>
+
+                <!-- Escrow Informative Banner -->
+                <div class="bg-gradient-to-r from-blue-900 to-indigo-900 text-white p-6 rounded-2xl shadow-md mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div class="flex items-center space-x-4">
+                        <div class="bg-white/10 p-3 rounded-full text-amber-400"><i class="fa-solid fa-shield-heart text-2xl"></i></div>
+                        <div>
+                            <h3 class="font-bold text-lg">อุ่นใจด้วยระบบตัวกลางถือเงิน (Escrow Service)</h3>
+                            <p class="text-sm text-slate-200 mt-1">เงินของท่านจะถูกเก็บไว้ที่ระบบส่วนกลาง และจะโอนให้ทนายความเมื่อได้รับคำปรึกษาหรือเสร็จสิ้นงานความความเรียบร้อยแล้วเท่านั้น (หักค่าธรรมเนียมแพลตฟอร์ม 10%)</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lawyers Grid / List -->
+                <div id="lawyersContainer" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Dynamic Content -->
+                </div>
+            </div>
+
+            <!-- TAB: ESCROW SYSTEM & BILLING -->
+            <div id="tab-escrow" class="tab-content hidden">
+                <div class="mb-8">
+                    <h2 class="text-2xl font-bold text-slate-900">ธุรกรรมการปรึกษาและการถือเงินตัวกลาง (Escrow Transactions)</h2>
+                    <p class="text-slate-500 mt-1">ติดตามเงินค่าธรรมเนียมปรึกษาหรือค่าทนายความที่ระบบทำหน้าที่ถือค้ำประกันไว้ให้</p>
+                </div>
+
+                <!-- Escrow Flow Guide Graphic -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mb-8">
+                    <h3 class="font-bold text-slate-800 text-center mb-6">ขั้นตอนการทำงานของระบบถือเงินคนกลาง (Escrow Workflow)</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
+                        <div class="p-4 rounded-xl bg-slate-50 border border-slate-100 relative">
+                            <span class="absolute top-2 left-2 text-xs font-bold text-blue-900 bg-blue-100 w-5 h-5 flex items-center justify-center rounded-full">1</span>
+                            <div class="text-blue-900 text-2xl mb-2"><i class="fa-solid fa-calendar-check"></i></div>
+                            <h4 class="font-semibold text-sm">ลูกความจองคิวนัดหมาย</h4>
+                            <p class="text-xs text-slate-500 mt-1">เลือกรอบวัน/เวลาเพื่อขอคดี</p>
+                        </div>
+                        <div class="p-4 rounded-xl bg-amber-50 border border-amber-100 relative">
+                            <span class="absolute top-2 left-2 text-xs font-bold text-amber-800 bg-amber-100 w-5 h-5 flex items-center justify-center rounded-full">2</span>
+                            <div class="text-amber-500 text-2xl mb-2"><i class="fa-solid fa-vault"></i></div>
+                            <h4 class="font-semibold text-sm">ระบบเป็นคนกลางถือเงิน</h4>
+                            <p class="text-xs text-slate-500 mt-1">ชำระเงินเข้ามาพักในระบบ (100%) เพื่อป้องกันการเบี้ยวงาน</p>
+                        </div>
+                        <div class="p-4 rounded-xl bg-indigo-50 border border-indigo-100 relative">
+                            <span class="absolute top-2 left-2 text-xs font-bold text-indigo-800 bg-indigo-100 w-5 h-5 flex items-center justify-center rounded-full">3</span>
+                            <div class="text-indigo-600 text-2xl mb-2"><i class="fa-solid fa-comments"></i></div>
+                            <h4 class="font-semibold text-sm">ทนายทำหน้าที่ตามนัด</h4>
+                            <p class="text-xs text-slate-500 mt-1">ทนายว่าความหรือให้คำปรึกษาจนเสร็จสิ้น</p>
+                        </div>
+                        <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-100 relative">
+                            <span class="absolute top-2 left-2 text-xs font-bold text-emerald-800 bg-emerald-100 w-5 h-5 flex items-center justify-center rounded-full">4</span>
+                            <div class="text-emerald-600 text-2xl mb-2"><i class="fa-solid fa-money-bill-transfer"></i></div>
+                            <h4 class="font-semibold text-sm">โอนเงิน & หัก 10%</h4>
+                            <p class="text-xs text-slate-500 mt-1">ส่งเงินให้ทนาย 90% และหักเป็นค่าแพลตฟอร์ม 10%</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <!-- Left Column: Active Transactions -->
+                    <div class="lg:col-span-2 space-y-6">
+                        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="font-bold text-lg text-slate-900">คิวงานและธุรกรรมปัจจุบันของคุณ</h3>
+                                <span class="text-xs text-slate-400 bg-slate-100 px-2.5 py-1 rounded-full font-medium" id="currentRoleLabel">บทบาท: ลูกความ</span>
+                            </div>
+                            
+                            <div id="escrowList" class="space-y-4">
+                                <!-- Dynamic List of Jobs -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Balance & Summary -->
+                    <div class="space-y-6">
+                        <!-- Fee Split Calculator Tool -->
+                        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                            <h3 class="font-bold text-slate-900 mb-3"><i class="fa-solid fa-percent text-blue-900 mr-1"></i>จำลองการคิดค่าบริการ 10%</h3>
+                            <div class="space-y-4 text-sm">
+                                <div>
+                                    <label class="block text-slate-500 mb-1 text-xs">อัตราค่าจ้างทนายความความ (บาท)</label>
+                                    <div class="relative">
+                                        <input type="number" id="calcAmount" oninput="calculateSplitFee(this.value)" value="5000" class="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-900">
+                                        <span class="absolute right-3 top-2.5 text-slate-400">บาท</span>
+                                    </div>
+                                </div>
+                                <div class="bg-slate-50 p-4 rounded-xl space-y-2 border border-slate-100">
+                                    <div class="flex justify-between text-xs text-slate-500">
+                                        <span>ยอดเงินที่ผู้ใช้ชำระเต็มจำนวน:</span>
+                                        <span class="font-bold" id="calcPaid">5,000 บาท</span>
+                                    </div>
+                                    <div class="flex justify-between text-xs text-red-600">
+                                        <span>หักเข้าแอป (Platform Fee 10%):</span>
+                                        <span class="font-bold" id="calcFee">- 500 บาท</span>
+                                    </div>
+                                    <hr class="border-slate-200 my-1">
+                                    <div class="flex justify-between text-sm text-emerald-700 font-bold">
+                                        <span>ทนายความจะได้รับสุทธิ (90%):</span>
+                                        <span id="calcPayout">4,500 บาท</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- System Escrow Vault Summary -->
+                        <div class="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-6 rounded-2xl shadow-sm">
+                            <h3 class="font-bold text-amber-400 mb-4 flex items-center"><i class="fa-solid fa-vault mr-2"></i>กระเป๋ากลางสำหรับถือเงิน</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <span class="block text-xs text-slate-400">เงินรวมคงค้างที่คนกลางถืออยู่ขณะนี้</span>
+                                    <span class="text-3xl font-extrabold text-white" id="escrowVaultBalance">฿0</span>
+                                    <span class="block text-[10px] text-slate-400 mt-1">*จะถูกโอนออกก็ต่อเมื่อมีการกดยืนยันการปฏิบัติงานสำเร็จ</span>
+                                </div>
+                                <div class="border-t border-slate-700 pt-4">
+                                    <span class="block text-xs text-slate-400">รายได้สะสมของแพลตฟอร์ม (10% Fee)</span>
+                                    <span class="text-lg font-bold text-emerald-400" id="platformTotalRevenue">฿0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: LAWYER REGISTER (สมัครทนายความ) -->
+            <div id="tab-register" class="tab-content hidden">
+                <div class="max-w-3xl mx-auto bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="text-center mb-8">
+                        <div class="bg-blue-100 text-blue-900 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                            <i class="fa-solid fa-address-card"></i>
+                        </div>
+                        <h2 class="text-2xl font-bold text-slate-900">สมัครเป็นทนายความพาร์ทเนอร์ของ LawLink</h2>
+                        <p class="text-sm text-slate-500 mt-1">รับงานให้คำปรึกษาและงานคดีความกฎหมายทั่วประเทศไทย ระบบถือค้ำประกันค่าธรรมเนียมให้คุณอย่างมั่นใจ</p>
+                    </div>
+
+                    <form id="lawyerRegisterForm" onsubmit="handleLawyerRegister(event)" class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">ชื่อ - นามสกุล *</label>
+                                <input type="text" id="regName" required placeholder="เช่น ทนายนภัสสร เจริญทรัพย์" class="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-950">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">ความเชี่ยวชาญหลัก *</label>
+                                <select id="regSpecialty" required class="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-950 bg-white">
+                                    <option value="civil">กฎหมายแพ่ง (ที่ดิน, สัญญา, มรดก, แพ่งและพาณิชย์)</option>
+                                    <option value="criminal">กฎหมายอาญา (ยาเสพติด, อาญาไอที, คดีทำร้ายร่างกาย)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">ปีประสบการณ์การทำงาน *</label>
+                                <input type="number" id="regExp" required min="1" max="60" placeholder="ระบุจำนวนปี" class="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-950">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">ค่าธรรมเนียมการว่าความเริ่มต้น (บาท) *</label>
+                                <input type="number" id="regRate" required min="500" placeholder="เช่น 4000" class="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-950">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">รายละเอียดและโปรไฟล์การทำงาน *</label>
+                                <textarea id="regBio" rows="3" required placeholder="อธิบายประวัติการทำงาน ยินดีให้คำปรึกษาเกี่ยวกับคดีใดบ้าง..." class="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-950 text-sm"></textarea>
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-semibold text-slate-700 mb-1">อัปโหลดภาพใบอนุญาตว่าความ (ตั๋วทนาย) *</label>
+                                <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-xl hover:bg-slate-50 transition-colors cursor-pointer relative">
+                                    <div class="space-y-1 text-center">
+                                        <i class="fa-solid fa-file-shield text-slate-400 text-3xl mb-2"></i>
+                                        <div class="flex text-sm text-slate-600 justify-center">
+                                            <span class="relative font-medium text-blue-900 hover:underline">
+                                                <span>อัปโหลดไฟล์ใบประกอบวิชาชีพ</span>
+                                            </span>
+                                        </div>
+                                        <p class="text-xs text-slate-400">PNG, JPG, PDF ขนาดไม่เกิน 5MB (จำลองภาพ)</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start">
+                            <div class="flex items-center h-5">
+                                <input id="regTerms" type="checkbox" required class="focus:ring-blue-900 h-4 w-4 text-blue-900 border-slate-300 rounded">
+                            </div>
+                            <div class="ml-3 text-sm">
+                                <label for="regTerms" class="font-medium text-slate-700">ยอมรับเงื่อนไขการใช้บริการของ LawLink</label>
+                                <p class="text-xs text-slate-400">ฉันตกลงให้ LawLink ทำหน้าที่เป็นผู้ช่วยคนกลางถือเงินค้ำประกันงานความ และหักค่าธรรมเนียมบริหารจัดการระบบ 10% เมื่อสัญญาสิ้นสุดลง</p>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="w-full bg-blue-950 hover:bg-blue-900 text-white font-bold py-3 px-4 rounded-xl transition-all shadow">
+                            ยืนยันการส่งใบสมัครและโปรไฟล์
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- TAB: ADMIN / AUDIT & REPORTS -->
+            <div id="tab-admin" class="tab-content hidden">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mb-8">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-900">แผงควบคุมหลักของผู้ดูแลระบบ (Admin Control Panel)</h2>
+                            <p class="text-xs text-slate-400 mt-1">เฉพาะผู้ดูแลระบบของ LawLink เท่านั้น สำหรับตรวจสอบ ค้ำประกันธุรกรรม และอนุมัติการจ่ายเงิน</p>
+                        </div>
+                        <span class="bg-red-100 text-red-700 text-xs px-3 py-1 rounded-full font-bold">โหมดผู้ดูแลระบบ</span>
+                    </div>
+
+                    <!-- Platform Stats Row -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div class="bg-slate-50 p-5 rounded-xl border border-slate-100">
+                            <span class="text-xs font-semibold text-slate-400 block">ยอดรวมที่ถือเงินไว้ (Escrow Holding)</span>
+                            <span class="text-2xl font-bold text-slate-800" id="adminHoldings">฿0</span>
+                        </div>
+                        <div class="bg-slate-50 p-5 rounded-xl border border-slate-100">
+                            <span class="text-xs font-semibold text-slate-400 block">รายได้สะสมแพลตฟอร์ม (10% Fee Realized)</span>
+                            <span class="text-2xl font-bold text-emerald-600" id="adminRevenue">฿0</span>
+                        </div>
+                        <div class="bg-slate-50 p-5 rounded-xl border border-slate-100">
+                            <span class="text-xs font-semibold text-slate-400 block">จำนวนเคสทั้งหมดในแอป</span>
+                            <span class="text-2xl font-bold text-blue-900" id="adminTotalJobs">0 รายการ</span>
+                        </div>
+                    </div>
+
+                    <!-- Escrow Audit Table -->
+                    <h3 class="font-bold text-sm text-slate-700 mb-3 uppercase tracking-wider">บันทึกธุรกรรมทางการเงินและการว่าความทั้งหมด</h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-slate-200">
+                            <thead class="bg-slate-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">รหัสธุรกรรม</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">ลูกความ</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">ทนายความ</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">ค่าจ้างรวม</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">หักค่าระบบ (10%)</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">ถึงมือทนาย (90%)</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">สถานะคนกลาง</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider">การกระทำ</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-slate-200" id="adminTransactionsTable">
+                                <!-- Dynamic Table Content -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- BOOKING MODAL (นัดหมายและชำระเงิน) -->
+        <div id="bookingModal" class="hidden fixed inset-0 z-50 bg-slate-950/60 flex items-center justify-center p-4 overflow-y-auto">
+            <div class="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl relative border border-slate-100 my-8">
+                <!-- Modal Header -->
+                <div class="flex justify-between items-start pb-4 border-b border-slate-200">
+                    <div>
+                        <h3 class="text-xl font-bold text-slate-900" id="modalLawyerName">ทนายความ สมศักดิ์ รัตนพงศ์</h3>
+                        <p class="text-xs text-slate-500 mt-1" id="modalSpecialty">เฉพาะทางกฎหมายแพ่ง</p>
+                    </div>
+                    <button onclick="closeBookingModal()" class="text-slate-400 hover:text-slate-600 transition-colors p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+                </div>
+
+                <!-- Modal Body with Form & Calendar -->
+                <div class="mt-4 space-y-4">
+                    <!-- Calendar Container Simulated -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">1. เลือกวันและเวลาปรึกษา (Calendar)</label>
+                        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                            <!-- Simple Calendar Layout -->
+                            <div class="grid grid-cols-7 gap-1 text-center text-xs mb-2">
+                                <span class="text-slate-400 font-medium">อา.</span>
+                                <span class="text-slate-400 font-medium">จ.</span>
+                                <span class="text-slate-400 font-medium">อ.</span>
+                                <span class="text-slate-400 font-medium">พ.</span>
+                                <span class="text-slate-400 font-medium">พฤ.</span>
+                                <span class="text-slate-400 font-medium">ศ.</span>
+                                <span class="text-slate-400 font-medium">ส.</span>
+                            </div>
+                            <div class="grid grid-cols-7 gap-1" id="calendarDays">
+                                <!-- Active Days in June 2026 -->
+                                <button onclick="selectDate(7)" id="day-7" class="py-1.5 rounded-lg text-xs font-bold text-slate-700 bg-white hover:bg-blue-100 border border-slate-200">7</button>
+                                <button onclick="selectDate(8)" id="day-8" class="py-1.5 rounded-lg text-xs font-bold text-slate-700 bg-white hover:bg-blue-100 border border-slate-200">8</button>
+                                <button onclick="selectDate(9)" id="day-9" class="py-1.5 rounded-lg text-xs font-bold text-slate-700 bg-white hover:bg-blue-100 border border-slate-200">9</button>
+                                <button onclick="selectDate(10)" id="day-10" class="py-1.5 rounded-lg text-xs font-bold text-slate-700 bg-white hover:bg-blue-100 border border-slate-200">10</button>
+                                <button onclick="selectDate(11)" id="day-11" class="py-1.5 rounded-lg text-xs font-bold text-slate-700 bg-white hover:bg-blue-100 border border-slate-200">11</button>
+                                <button onclick="selectDate(12)" id="day-12" class="py-1.5 rounded-lg text-xs font-bold text-slate-700 bg-white hover:bg-blue-100 border border-slate-200">12</button>
+                                <button onclick="selectDate(13)" id="day-13" class="py-1.5 rounded-lg text-xs font-bold text-slate-700 bg-white hover:bg-blue-100 border border-slate-200">13</button>
+                            </div>
+                            <!-- Time Slots -->
+                            <div class="mt-3 flex gap-2 overflow-x-auto pb-1" id="timeSlots">
+                                <button onclick="selectTime('09:00')" id="time-09" class="px-2.5 py-1 text-xs font-medium border border-slate-200 rounded-md bg-white hover:bg-slate-100 text-slate-700 shrink-0">09:00</button>
+                                <button onclick="selectTime('11:00')" id="time-11" class="px-2.5 py-1 text-xs font-medium border border-slate-200 rounded-md bg-white hover:bg-slate-100 text-slate-700 shrink-0">11:00</button>
+                                <button onclick="selectTime('14:00')" id="time-14" class="px-2.5 py-1 text-xs font-medium border border-slate-200 rounded-md bg-white hover:bg-slate-100 text-slate-700 shrink-0">14:00</button>
+                                <button onclick="selectTime('16:00')" id="time-16" class="px-2.5 py-1 text-xs font-medium border border-slate-200 rounded-md bg-white hover:bg-slate-100 text-slate-700 shrink-0">16:00</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Booking & Case Details -->
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">2. ข้อมูลย่อของคดี / เรื่องที่ปรึกษา</label>
+                        <textarea id="bookingCaseDesc" rows="2" class="w-full text-sm px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-900" placeholder="ระบุข้อมูลเคสเบื้องต้นเพื่ออำนวยความสะดวกให้ทนายความ..."></textarea>
+                    </div>
+
+                    <!-- Pricing Info -->
+                    <div class="bg-amber-50 p-4 rounded-2xl border border-amber-200">
+                        <div class="flex justify-between items-center text-sm">
+                            <span class="text-amber-800 font-semibold flex items-center">
+                                <i class="fa-solid fa-lock mr-2 text-amber-600"></i> ยอดที่ระบบคนกลางถือค้ำประกัน:
+                            </span>
+                            <span class="text-lg font-bold text-slate-900" id="modalBookingPrice">฿3,000</span>
+                        </div>
+                        <p class="text-[11px] text-amber-700/80 mt-1">เงินของคุณจะถูกเก็บในที่คนกลางและโอนให้ทนายเมื่อคุณกดยืนยันงานว่าความ (หรือยกเลิกการว่าความเมื่อไม่ได้รับการนัดปรึกษา)</p>
+                    </div>
+                </div>
+
+                <!-- Footer Buttons -->
+                <div class="mt-6 flex space-x-3">
+                    <button onclick="closeBookingModal()" class="flex-1 py-3 text-sm font-semibold border border-slate-200 hover:bg-slate-50 rounded-xl transition-all">ยกเลิก</button>
+                    <button onclick="confirmBooking()" class="flex-1 py-3 text-sm font-semibold text-white bg-blue-950 hover:bg-blue-900 rounded-xl transition-all shadow-md">ชำระเงินจำลองเข้าระบบ</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="bg-slate-900 text-slate-400 py-10 border-t border-slate-800 mt-12 text-sm">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                    <div class="flex items-center space-x-3">
+                        <div class="bg-white/10 p-2 rounded text-white"><i class="fa-solid fa-scale-balanced"></i></div>
+                        <div>
+                            <span class="text-base font-bold text-white tracking-tight">LawLink Thai</span>
+                            <p class="text-xs text-slate-500 mt-0.5">&copy; 2026 LawLink Thai, Co., Ltd. แพลตฟอร์มค้ำประกันธุรกรรมว่าความทนายความ</p>
+                        </div>
+                    </div>
+                    <div class="flex space-x-6">
+                        <span class="text-xs text-slate-500">ระบบคนกลางตรวจสอบและบันทึกอัตราความสำเร็จ</span>
+                        <a href="#" class="hover:text-white transition-colors">เงื่อนไขการใช้บริการ</a>
+                        <a href="#" class="hover:text-white transition-colors">นโยบายความเป็นส่วนตัว</a>
+                    </div>
+                </div>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- MAIN APP JAVASCRIPT LOGIC -->
+    <script>
+        // --- DATA STATE ---
+        let lawyers = [
+            {
+                id: 1,
+                name: "สมศักดิ์ รัตนพงศ์",
+                avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?fit=crop&w=300&h=300",
+                specialty: "civil", // 'civil' = แพ่ง, 'criminal' = อาญา
+                specialtyLabel: "กฎหมายแพ่ง",
+                rating: 4.8,
+                reviewsCount: 42,
+                experience: 15,
+                fee: 3000,
+                casesSummary: "ชนะ 380/450 คดี",
+                bio: "ทนายความผู้เชี่ยวชาญด้านกฎหมายแพ่งและพาณิชย์ มีประสบการณ์ด้านกฎหมายที่ดิน สัญญา และมรดก ให้คำปรึกษาและว่าความมากกว่า 500 คดี ด้วยอัตราการชนะคดีสูง"
+            },
+            {
+                id: 2,
+                name: "ประภาส มณีวงษ์",
+                avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?fit=crop&w=300&h=300",
+                specialty: "civil",
+                specialtyLabel: "กฎหมายแพ่ง",
+                rating: 4.7,
+                reviewsCount: 53,
+                experience: 18,
+                fee: 4500,
+                casesSummary: "ชนะ 510/600 คดี",
+                bio: "ทนายความอาวุโสผู้เชี่ยวชาญด้านกฎหมายอสังหาริมทรัพย์และสัญญาซื้อขาย มีประสบการณ์จัดการคดีพิพาทที่ดินและโฉนดมากกว่า 600 คดี เป็นที่ปรึกษากฎหมายให้บริษัทพัฒนาอสังหาริมทรัพย์ชั้นนำ"
+            },
+            {
+                id: 3,
+                name: "นภัสสร เจริญทรัพย์",
+                avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?fit=crop&w=300&h=300",
+                specialty: "criminal",
+                specialtyLabel: "กฎหมายอาญา",
+                rating: 4.7,
+                reviewsCount: 31,
+                experience: 10,
+                fee: 4000,
+                casesSummary: "ชนะ 170/220 คดี",
+                bio: "ผู้เชี่ยวชาญด้านกฎหมายอาญาเกี่ยวกับเทคโนโลยี อาชญากรรมทางไซเบอร์ และ พ.ร.บ. คอมพิวเตอร์ ให้คำปรึกษาทั้งบุคคลทั่วไปและองค์กรขนาดใหญ่"
+            },
+            {
+                id: 4,
+                name: "ชาญณรงค์ พึ่งพระเดช",
+                avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?fit=crop&w=300&h=300",
+                specialty: "criminal",
+                specialtyLabel: "กฎหมายอาญา",
+                rating: 4.9,
+                reviewsCount: 28,
+                experience: 12,
+                fee: 5000,
+                casesSummary: "ชนะ 195/240 คดี",
+                bio: "ทนายความด้านอาญา คดีฟ้องร้องเรียกสิทธิ คดีทำร้ายร่างกาย และคดีทรัพย์สินทางปัญญา มีความละเอียดรอบคอบในการวิเคราะห์หลักฐานพยาน"
+            },
+            {
+                id: 5,
+                name: "มาลิณี ศิริพันธุ์",
+                avatar: "https://images.unsplash.com/photo-1580489944761-15a19d654956?fit=crop&w=300&h=300",
+                specialty: "civil",
+                specialtyLabel: "กฎหมายแพ่ง",
+                rating: 4.9,
+                reviewsCount: 61,
+                experience: 14,
+                fee: 3500,
+                casesSummary: "ชนะ 310/350 คดี",
+                bio: "ทนายกฎหมายครอบครัว การฟ้องหย่า สิทธิการปกครองบุตร และคดีพิพาทมรดก มีทักษะการเจรจาไกล่เกลี่ยคดีความที่เป็นเลิศ"
+            }
+        ];
+
+        // Escrow Booking Statuses:
+        // 'holding' (คนกลางกำลังถือเงิน) -> 'completed' (โอนเงินให้ทนายเรียบร้อย) -> 'cancelled' (คืนเงินให้ลูกค้า)
+        let transactions = [
+            {
+                id: "TX-9018",
+                clientId: "user-1",
+                clientName: "ลูกค้าทั่วไป (คุณรักษ์บารมี)",
+                lawyerId: 1,
+                lawyerName: "สมศักดิ์ รัตนพงศ์",
+                caseDesc: "ปรึกษาเรื่องข้อพิพาทสัญญากู้ยืมเงิน 500,000 บาท กับญาติ",
+                date: "2026-06-08",
+                time: "14:00",
+                amountPaid: 3000,
+                platformFee: 300,  // 10%
+                payoutToLawyer: 2700, // 90%
+                status: "holding"
+            },
+            {
+                id: "TX-7811",
+                clientId: "user-1",
+                clientName: "ลูกค้าทั่วไป (คุณรักษ์บารมี)",
+                lawyerId: 3,
+                lawyerName: "นภัสสร เจริญทรัพย์",
+                caseDesc: "ให้คำปรึกษาคดีฉ้อโกงบัตรเครดิตและอาชญากรรมทางแอปพลิเคชัน",
+                date: "2026-06-05",
+                time: "10:00",
+                amountPaid: 4000,
+                platformFee: 400,
+                payoutToLawyer: 3600,
+                status: "completed"
+            }
+        ];
+
+        // App States
+        let currentRole = "client"; // 'client', 'lawyer' (สมศักดิ์ id: 1), 'admin'
+        let currentTab = "home";
+        let specialtyFilter = "all";
+        let userWalletAmount = 15000;
+        let selectedBookingLawyerId = null;
+        let selectedDateNum = 8;
+        let selectedTimeStr = "14:00";
+
+        // --- ON INITIAL LOAD ---
+        window.onload = function() {
+            renderLawyers();
+            renderTransactions();
+            updateStats();
+            updateWalletUI();
+        };
+
+        // --- NAVIGATION & TABS ---
+        function changeTab(tabId) {
+            currentTab = tabId;
+            
+            // Toggle Tab Contents
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+            // Reset navigation active classes
+            document.querySelectorAll('nav button').forEach(el => {
+                el.classList.remove('text-blue-900', 'border-b-2', 'border-blue-900');
+                el.classList.add('text-slate-500');
+            });
+            
+            // Add active class to current tab button
+            const navBtn = document.getElementById(`nav-${tabId}`);
+            if (navBtn) {
+                navBtn.classList.remove('text-slate-500');
+                navBtn.classList.add('text-blue-900', 'border-b-2', 'border-blue-900');
+            }
+
+            // Custom renders on tab change
+            if (tabId === 'escrow' || tabId === 'admin') {
+                renderTransactions();
+            }
+        }
+
+        function switchRole(role) {
+            currentRole = role;
+            
+            // Reset Wallet display based on role
+            if (role === 'client') {
+                userWalletAmount = 15000; // Client simulation budget
+                showAlert("success", "เปลี่ยนสลับบทบาท", "คุณกำลังจำลองเป็น 'ลูกความ' คุณสามารถกดจองทนายและชำระเงินเข้ามาที่คนกลางได้");
+            } else if (role === 'lawyer') {
+                userWalletAmount = 0; // Starts from 0, grows with completed jobs
+                showAlert("info", "เปลี่ยนสลับบทบาท", "คุณกำลังจำลองเป็น 'ทนายความ (สมศักดิ์ รัตนพงศ์)' สามารถกดยืนยันการจบปรึกษาเพื่อรับเงิน 90% ได้");
+            } else if (role === 'admin') {
+                userWalletAmount = 50000; // Big platform pool
+                showAlert("warning", "เปลี่ยนสลับบทบาท", "คุณเข้าสู่มุมมอง 'ผู้ดูแลระบบ' สามารถอนุมัติหรือยกเลิก คืนเงิน ทุกเคสได้เพื่อความโปร่งใส");
+            }
+            
+            updateWalletUI();
+            renderTransactions();
+            
+            // Update Text indicators
+            const currentRoleLabel = document.getElementById('currentRoleLabel');
+            if (currentRoleLabel) {
+                let roleThai = "ลูกความ";
+                if (role === 'lawyer') roleThai = "ทนายความ (สมศักดิ์)";
+                if (role === 'admin') roleThai = "ผู้ดูแลระบบ (Admin)";
+                currentRoleLabel.innerText = `บทบาท: ${roleThai}`;
+            }
+        }
+
+        function updateWalletUI() {
+            document.getElementById('userWallet').innerText = userWalletAmount.toLocaleString('th-TH') + " บาท";
+        }
+
+        function updateStats() {
+            // Update metrics numbers
+            document.getElementById('totalLawyersCount').innerText = lawyers.length;
+            document.getElementById('civilLawyersCount').innerText = lawyers.filter(l => l.specialty === 'civil').length;
+            document.getElementById('criminalLawyersCount').innerText = lawyers.filter(l => l.specialty === 'criminal').length;
+
+            // Update Escrow Stats
+            let activeHoldingSum = transactions.filter(t => t.status === 'holding').reduce((sum, t) => sum + t.amountPaid, 0);
+            let platformRevenueSum = transactions.filter(t => t.status === 'completed').reduce((sum, t) => sum + t.platformFee, 0);
+
+            document.getElementById('escrowVaultBalance').innerText = "฿" + activeHoldingSum.toLocaleString('th-TH');
+            document.getElementById('platformTotalRevenue').innerText = "฿" + platformRevenueSum.toLocaleString('th-TH');
+
+            // Admin Stats View
+            const adminHoldings = document.getElementById('adminHoldings');
+            const adminRevenue = document.getElementById('adminRevenue');
+            const adminTotalJobs = document.getElementById('adminTotalJobs');
+            if (adminHoldings && adminRevenue && adminTotalJobs) {
+                adminHoldings.innerText = "฿" + activeHoldingSum.toLocaleString('th-TH');
+                adminRevenue.innerText = "฿" + platformRevenueSum.toLocaleString('th-TH');
+                adminTotalJobs.innerText = transactions.length + " รายการ";
+            }
+        }
+
+        // --- RENDER LAWYERS ---
+        function setSpecialtyFilter(type) {
+            specialtyFilter = type;
+            
+            // Update filter buttons styling
+            const buttons = ['all', 'civil', 'criminal'];
+            buttons.forEach(b => {
+                const btn = document.getElementById(`filter-${b}`);
+                if (b === type) {
+                    btn.className = "px-4 py-2 rounded-xl text-sm font-medium transition-all bg-blue-950 text-white whitespace-nowrap";
+                } else {
+                    btn.className = "px-4 py-2 rounded-xl text-sm font-medium transition-all bg-slate-100 hover:bg-slate-200 text-slate-700 whitespace-nowrap";
+                }
+            });
+
+            renderLawyers();
+        }
+
+        function filterLawyers() {
+            renderLawyers();
+        }
+
+        function renderLawyers() {
+            const container = document.getElementById('lawyersContainer');
+            container.innerHTML = '';
+
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+
+            const filtered = lawyers.filter(lawyer => {
+                const matchType = (specialtyFilter === 'all') || (lawyer.specialty === specialtyFilter);
+                const matchSearch = lawyer.name.toLowerCase().includes(searchQuery) || lawyer.bio.toLowerCase().includes(searchQuery);
+                return matchType && matchSearch;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-2 py-12 text-center bg-white rounded-2xl border border-slate-200">
+                        <i class="fa-solid fa-scale-unbalanced text-slate-300 text-4xl mb-3"></i>
+                        <h3 class="font-bold text-slate-500">ไม่พบข้อมูลทนายความ</h3>
+                        <p class="text-xs text-slate-400">ลองเปลี่ยนแปลงหัวข้อค้นหาใหม่อีกครั้ง</p>
+                    </div>
+                `;
+                return;
+            }
+
+            filtered.forEach(lawyer => {
+                const specColorClass = lawyer.specialty === 'civil' ? 'bg-blue-50 text-blue-800 border-blue-200' : 'bg-red-50 text-red-800 border-red-200';
+                const specIcon = lawyer.specialty === 'civil' ? '<i class="fa-solid fa-scale-balanced mr-1"></i> กฎหมายแพ่ง' : '<i class="fa-solid fa-shield-halved mr-1"></i> กฎหมายอาญา';
+                
+                const card = `
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden hover:shadow-md transition-all flex flex-col md:flex-row">
+                        <!-- Profile Image & Badge -->
+                        <div class="md:w-1/3 relative bg-slate-100 flex items-center justify-center p-4">
+                            <img src="${lawyer.avatar}" alt="${lawyer.name}" class="w-24 h-24 md:w-full md:h-full object-cover rounded-full md:rounded-none" onerror="this.src='https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?fit=crop&w=300&h=300'">
+                            <span class="absolute top-3 left-3 px-2.5 py-1 text-xs font-semibold rounded-full border ${specColorClass}">
+                                ${specIcon}
+                            </span>
+                        </div>
+                        <!-- Profile Details -->
+                        <div class="p-6 md:w-2/3 flex flex-col justify-between">
+                            <div>
+                                <div class="flex justify-between items-start">
+                                    <h3 class="font-bold text-lg text-slate-900">${lawyer.name}</h3>
+                                    <div class="flex items-center text-amber-500 text-xs">
+                                        <i class="fa-solid fa-star mr-1"></i>
+                                        <span class="font-bold">${lawyer.rating}</span>
+                                        <span class="text-slate-400 ml-1">(${lawyer.reviewsCount} รีวิว)</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-slate-500">
+                                    <span><i class="fa-solid fa-briefcase mr-1 text-slate-400"></i> ${lawyer.experience} ปี</span>
+                                    <span><i class="fa-solid fa-circle-check mr-1 text-emerald-500"></i> ${lawyer.casesSummary}</span>
+                                    <span><i class="fa-solid fa-tag mr-1 text-blue-900"></i> ฿${lawyer.fee.toLocaleString('th-TH')} / นัดปรึกษา</span>
+                                </div>
+
+                                <p class="text-xs text-slate-600 mt-4 line-clamp-3 leading-relaxed">${lawyer.bio}</p>
+                            </div>
+
+                            <div class="mt-6 flex items-center justify-between gap-2 border-t border-slate-100 pt-4">
+                                <span class="text-xs text-slate-400 flex items-center"><i class="fa-solid fa-shield text-emerald-600 mr-1.5"></i>ระบบคนกลางคืนเงินเต็มเม็ด</span>
+                                <button onclick="openBookingModal(${lawyer.id})" class="px-5 py-2 bg-blue-950 hover:bg-blue-900 text-white rounded-xl text-xs font-bold transition-all shadow-sm">
+                                    จองและปรึกษาทนายความ
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += card;
+            });
+        }
+
+        // --- BOOKING MODAL LOGIC ---
+        function openBookingModal(lawyerId) {
+            selectedBookingLawyerId = lawyerId;
+            const lawyer = lawyers.find(l => l.id === lawyerId);
+            
+            if (!lawyer) return;
+
+            document.getElementById('modalLawyerName').innerText = `ทนายความ ${lawyer.name}`;
+            document.getElementById('modalSpecialty').innerHTML = lawyer.specialty === 'civil' ? '<span class="text-blue-700">กฎหมายแพ่ง</span>' : '<span class="text-red-700">กฎหมายอาญา</span>';
+            document.getElementById('modalBookingPrice').innerText = "฿" + lawyer.fee.toLocaleString('th-TH');
+            
+            // Set Calendar Defaults
+            selectedDateNum = 8;
+            selectedTimeStr = "14:00";
+            updateCalendarUI();
+
+            // Open Modal
+            document.getElementById('bookingModal').classList.remove('hidden');
+        }
+
+        function closeBookingModal() {
+            document.getElementById('bookingModal').classList.add('hidden');
+        }
+
+        function selectDate(dateNum) {
+            selectedDateNum = dateNum;
+            updateCalendarUI();
+        }
+
+        function selectTime(timeStr) {
+            selectedTimeStr = timeStr;
+            updateCalendarUI();
+        }
+
+        function updateCalendarUI() {
+            // Days selector
+            const days = [7, 8, 9, 10, 11, 12, 13];
+            days.forEach(d => {
+                const dayBtn = document.getElementById(`day-${d}`);
+                if (d === selectedDateNum) {
+                    dayBtn.className = "py-1.5 rounded-lg text-xs font-bold text-white bg-blue-900 border border-blue-900";
+                } else {
+                    dayBtn.className = "py-1.5 rounded-lg text-xs font-bold text-slate-700 bg-white hover:bg-blue-50 border border-slate-200";
+                }
+            });
+
+            // Time selector
+            const times = ['09', '11', '14', '16'];
+            times.forEach(t => {
+                const timeBtn = document.getElementById(`time-${t}`);
+                const fullTime = `${t}:00`;
+                if (fullTime === selectedTimeStr) {
+                    timeBtn.className = "px-2.5 py-1 text-xs font-bold border border-blue-900 rounded-md bg-blue-900 text-white shrink-0";
+                } else {
+                    timeBtn.className = "px-2.5 py-1 text-xs font-medium border border-slate-200 rounded-md bg-white hover:bg-slate-100 text-slate-700 shrink-0";
+                }
+            });
+        }
+
+        function confirmBooking() {
+            const lawyer = lawyers.find(l => l.id === selectedBookingLawyerId);
+            if (!lawyer) return;
+
+            // Check if user has enough balance
+            if (userWalletAmount < lawyer.fee) {
+                showAlert("error", "ยอดเงินไม่เพียงพอ", "คุณมียอดเงินจำลองไม่พอสำหรับการจองทนายความท่านนี้ ลองเลือกทนายท่านอื่นหรือรีเซ็ตระบบ");
+                closeBookingModal();
+                return;
+            }
+
+            // Deduct client money
+            userWalletAmount -= lawyer.fee;
+            updateWalletUI();
+
+            // Calculate fees
+            const platformFee = Math.round(lawyer.fee * 0.1);
+            const payoutToLawyer = lawyer.fee - platformFee;
+
+            // Create Transaction Entry
+            const newTx = {
+                id: "TX-" + Math.floor(1000 + Math.random() * 9000),
+                clientId: "user-1",
+                clientName: "ลูกค้าทั่วไป (คุณรักษ์บารมี)",
+                lawyerId: lawyer.id,
+                lawyerName: lawyer.name,
+                caseDesc: document.getElementById('bookingCaseDesc').value || "นัดหารือปัญหากฎหมายทั่วไปและการสืบหาหลักฐาน",
+                date: `2026-06-${selectedDateNum < 10 ? '0' + selectedDateNum : selectedDateNum}`,
+                time: selectedTimeStr,
+                amountPaid: lawyer.fee,
+                platformFee: platformFee,
+                payoutToLawyer: payoutToLawyer,
+                status: "holding" // Starts as escrow holding
+            };
+
+            transactions.unshift(newTx);
+            
+            closeBookingModal();
+            updateStats();
+            showAlert("success", "วางเงินคนกลางเรียบร้อย!", `เงินจำนวน ฿${lawyer.fee.toLocaleString('th-TH')} ถูกกักไว้ที่ระบบคนกลางเพื่อว่าความให้ทนายความ ${lawyer.name} เรียบร้อยแล้ว`);
+            
+            // Switch tabs directly to show the transaction
+            changeTab('escrow');
+        }
+
+        // --- RENDER TRANSACTIONS (ESCROW MANAGEMENT) ---
+        function renderTransactions() {
+            const escrowList = document.getElementById('escrowList');
+            const adminTable = document.getElementById('adminTransactionsTable');
+            
+            // Clear current list and table
+            escrowList.innerHTML = '';
+            adminTable.innerHTML = '';
+
+            if (transactions.length === 0) {
+                escrowList.innerHTML = `
+                    <div class="text-center py-8 text-slate-400">
+                        <i class="fa-solid fa-money-check text-3xl mb-2"></i>
+                        <p>ไม่มีประวัติการทำธุรกรรมหรือคนกลางถือเงิน</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Filter/display based on role
+            transactions.forEach(tx => {
+                
+                // Status badge design
+                let statusBadge = '';
+                let actionButtons = '';
+                
+                if (tx.status === 'holding') {
+                    statusBadge = `<span class="bg-amber-100 text-amber-800 text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> คนกลางถือเงิน (Escrow)
+                                  </span>`;
+                    
+                    // Buttons depending on who is viewing
+                    if (currentRole === 'client') {
+                        actionButtons = `
+                            <button onclick="approveRelease('${tx.id}')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors">
+                                ยอมรับและปล่อยเงินให้ทนาย (90%)
+                            </button>
+                            <button onclick="cancelBooking('${tx.id}')" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg text-xs font-medium transition-colors">
+                                ขอยกเลิกนัด
+                            </button>
+                        `;
+                    } else if (currentRole === 'lawyer' && tx.lawyerId === 1) { // Lawyer "Somsak" simulation
+                        actionButtons = `
+                            <button onclick="lawyerRequestRelease('${tx.id}')" class="px-3 py-1.5 bg-blue-900 hover:bg-blue-800 text-white rounded-lg text-xs font-bold transition-colors">
+                                ส่งมอบคำปรึกษาสำเร็จ (ขอเบิกเงิน)
+                            </button>
+                        `;
+                    } else if (currentRole === 'admin') {
+                        actionButtons = `
+                            <button onclick="approveRelease('${tx.id}')" class="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold transition-colors">
+                                อนุมัติการปล่อยเงิน
+                            </button>
+                            <button onclick="cancelBooking('${tx.id}')" class="px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded text-xs font-bold transition-colors">
+                                คืนเงินลูกค้า
+                            </button>
+                        `;
+                    } else {
+                        actionButtons = `<span class="text-xs text-slate-400 italic">กรุณาสลับบทบาทเป็น "ลูกความ" หรือ "ทนายความเจ้าของเคส" เพื่อกระทำการ</span>`;
+                    }
+
+                } else if (tx.status === 'completed') {
+                    statusBadge = `<span class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1">
+                                    <i class="fa-solid fa-circle-check"></i> สำเร็จและหัก 10%
+                                  </span>`;
+                    actionButtons = `<span class="text-xs text-slate-400 italic">การเงินจัดสรรเรียบร้อย: ทนายรับ ฿${tx.payoutToLawyer.toLocaleString('th-TH')} | แพลตฟอร์มรับ ฿${tx.platformFee.toLocaleString('th-TH')}</span>`;
+                } else if (tx.status === 'cancelled') {
+                    statusBadge = `<span class="bg-slate-100 text-slate-500 text-xs px-2.5 py-1 rounded-full font-bold flex items-center gap-1">
+                                    <i class="fa-solid fa-ban"></i> ยกเลิกเคส
+                                  </span>`;
+                    actionButtons = `<span class="text-xs text-slate-400">เงินคืนผู้ใช้เต็มจำนวน ฿${tx.amountPaid.toLocaleString('th-TH')}</span>`;
+                }
+
+                // Append to Escrow UI (Tab: Escrow)
+                const card = `
+                    <div class="bg-slate-50 p-5 rounded-2xl border border-slate-100 hover:border-slate-200 transition-all">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-4">
+                            <div>
+                                <span class="text-xs font-mono text-slate-400 block">${tx.id}</span>
+                                <h4 class="font-bold text-slate-900 text-sm">ทนายคู่กรณี: ${tx.lawyerName}</h4>
+                            </div>
+                            <div>
+                                ${statusBadge}
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-3 rounded-xl border border-slate-100 text-xs space-y-1 text-slate-600 mb-4">
+                            <p><strong>รายละเอียดคดี:</strong> ${tx.caseDesc}</p>
+                            <p><strong>เวลานัดหมาย:</strong> วันที่ ${tx.date} เวลา ${tx.time} น.</p>
+                            <p><strong>วงเงินค้ำประกัน (Escrow Total):</strong> ฿${tx.amountPaid.toLocaleString('th-TH')} บาท</p>
+                        </div>
+
+                        <div class="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-dashed border-slate-200">
+                            <div class="text-[11px] text-slate-400">
+                                <span>*ยอดเงินแบ่งสรร: ทนายรับ 90% (฿${tx.payoutToLawyer.toLocaleString('th-TH')}) | แพลตฟอร์ม 10% (฿${tx.platformFee.toLocaleString('th-TH')})</span>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                ${actionButtons}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                escrowList.innerHTML += card;
+
+                // Append to Admin Table (Tab: Admin)
+                let tableStatusBadge = statusBadge;
+                let tableActionButtons = `
+                    <div class="flex space-x-1">
+                        <button onclick="approveRelease('${tx.id}')" class="px-2 py-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded text-xs transition-colors" title="ปล่อยเงินให้ทนาย">
+                            <i class="fa-solid fa-check"></i>
+                        </button>
+                        <button onclick="cancelBooking('${tx.id}')" class="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs transition-colors" title="คืนเงินผู้จอง">
+                            <i class="fa-solid fa-rotate-left"></i>
+                        </button>
+                    </div>
+                `;
+
+                if (tx.status !== 'holding') {
+                    tableActionButtons = `<span class="text-xs text-slate-400 italic">ดำเนินการแล้ว</span>`;
+                }
+
+                const tableRow = `
+                    <tr>
+                        <td class="px-6 py-4 whitespace-nowrap text-xs font-mono text-slate-900">${tx.id}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-500">${tx.clientName}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-500">${tx.lawyerName}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-xs font-bold text-slate-900">฿${tx.amountPaid.toLocaleString('th-TH')}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-xs text-red-600 font-medium">฿${tx.platformFee.toLocaleString('th-TH')}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-xs text-emerald-600 font-semibold">฿${tx.payoutToLawyer.toLocaleString('th-TH')}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-xs">${tableStatusBadge}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-xs text-slate-500">${tableActionButtons}</td>
+                    </tr>
+                `;
+                adminTable.innerHTML += tableRow;
+            });
+
+            updateStats();
+        }
+
+        // --- TRANSACTIONS OPERATIONS ---
+        function approveRelease(txId) {
+            const tx = transactions.find(t => t.id === txId);
+            if (!tx || tx.status !== 'holding') return;
+
+            // Change Status to completed
+            tx.status = 'completed';
+            
+            // Allocate funds in simulation
+            if (currentRole === 'lawyer' && tx.lawyerId === 1) {
+                // If logged in as Lawyer (Somsak) Somsak gets the 90%
+                userWalletAmount += tx.payoutToLawyer;
+            } else if (currentRole === 'admin') {
+                // Admin platform pocket grows with 10%
+                userWalletAmount += tx.platformFee;
+            } else if (currentRole === 'client') {
+                // Client gets confirmation, money goes to the lawyer (Somsak ID:1 if it was his case)
+                // Just let them know
+            }
+
+            updateWalletUI();
+            updateStats();
+            renderTransactions();
+            
+            showAlert("success", "ชำระเงินโอนให้ทนายเรียบร้อย!", `ความพึงพอใจได้รับการยืนยัน! แพลตฟอร์มหักส่วนแบ่ง 10% (฿${tx.platformFee.toLocaleString('th-TH')} บาท) และส่งเงินอีก 90% (฿${tx.payoutToLawyer.toLocaleString('th-TH')} บาท) เข้าบัญชีธนาคารของ ${tx.lawyerName} สำเร็จ`);
+        }
+
+        function cancelBooking(txId) {
+            const tx = transactions.find(t => t.id === txId);
+            if (!tx || tx.status !== 'holding') return;
+
+            tx.status = 'cancelled';
+
+            // Return full 100% amount back to the client wallet
+            if (currentRole === 'client') {
+                userWalletAmount += tx.amountPaid;
+            }
+
+            updateWalletUI();
+            updateStats();
+            renderTransactions();
+
+            showAlert("warning", "ยกเลิกการจองเรียบร้อย", `การนัดปรึกษาถูกปฏิเสธหรือยกเลิก เงินจำนวน ฿${tx.amountPaid.toLocaleString('th-TH')} บาท ได้โอนคืนเข้ากระเป๋าของคุณเต็มจำนวนโดยไม่มีค่าธรรมเนียม`);
+        }
+
+        function lawyerRequestRelease(txId) {
+            showAlert("info", "ส่งคำร้องขอเบิกเงิน", "ระบบได้ส่งการแจ้งเตือนไปยัง 'ลูกความ' เพื่อให้พวกเขากดปุ่มกดยืนยันเพื่อปล่อยเงิน (หรือคุณสามารถสลับไปเป็นผู้ดูแล Admin เพื่ออนุมัติข้ามได้)");
+        }
+
+        // --- FEE CALCULATOR AUX ---
+        function calculateSplitFee(val) {
+            const amt = parseFloat(val) || 0;
+            const fee = Math.round(amt * 0.1);
+            const payout = amt - fee;
+
+            document.getElementById('calcPaid').innerText = amt.toLocaleString('th-TH') + " บาท";
+            document.getElementById('calcFee').innerText = "- " + fee.toLocaleString('th-TH') + " บาท";
+            document.getElementById('calcPayout').innerText = payout.toLocaleString('th-TH') + " บาท";
+        }
+
+        // --- REGISTER AS LAWYER ---
+        function handleLawyerRegister(event) {
+            event.preventDefault();
+
+            const name = document.getElementById('regName').value;
+            const specialty = document.getElementById('regSpecialty').value;
+            const exp = parseInt(document.getElementById('regExp').value);
+            const rate = parseFloat(document.getElementById('regRate').value);
+            const bio = document.getElementById('regBio').value;
+
+            const newLawyer = {
+                id: lawyers.length + 1,
+                name: name,
+                avatar: "https://images.unsplash.com/photo-1556157382-97eda2d62296?fit=crop&w=300&h=300",
+                specialty: specialty,
+                specialtyLabel: specialty === 'civil' ? 'กฎหมายแพ่ง' : 'กฎหมายอาญา',
+                rating: 5.0,
+                reviewsCount: 1,
+                experience: exp,
+                fee: rate,
+                casesSummary: "พร้อมปฏิบัติหน้าที่",
+                bio: bio
+            };
+
+            lawyers.unshift(newLawyer);
+            renderLawyers();
+            updateStats();
+            showAlert("success", "ยินดีต้อนรับทนายใหม่!", `ลงทะเบียนและอัปโหลดข้อมูลสำเร็จเรียบร้อยแล้ว รายชื่อทนายความ ${name} ได้แสดงอยู่บนกระดานค้นหาพร้อมรับบริการจากประชาชนแล้ว`);
+            
+            // Switch back to search screen
+            changeTab('home');
+
+            // Reset form
+            document.getElementById('lawyerRegisterForm').reset();
+        }
+
+        // --- ALERT UTILS ---
+        function showAlert(type, title, text) {
+            const banner = document.getElementById('statusAlert');
+            const icon = document.getElementById('alertIcon');
+            const titleEl = document.getElementById('alertTitle');
+            const descEl = document.getElementById('alertDesc');
+
+            banner.classList.remove('hidden', 'bg-emerald-50', 'border-emerald-200', 'bg-rose-50', 'border-rose-200', 'bg-blue-50', 'border-blue-200', 'bg-amber-50', 'border-amber-200');
+
+            if (type === 'success') {
+                banner.classList.add('bg-emerald-50', 'border-emerald-200');
+                icon.className = "p-2 rounded-lg text-white bg-emerald-600";
+                icon.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+            } else if (type === 'error') {
+                banner.classList.add('bg-rose-50', 'border-rose-200');
+                icon.className = "p-2 rounded-lg text-white bg-rose-600";
+                icon.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i>';
+            } else if (type === 'warning') {
+                banner.classList.add('bg-amber-50', 'border-amber-200');
+                icon.className = "p-2 rounded-lg text-white bg-amber-500";
+                icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+            } else {
+                banner.classList.add('bg-blue-50', 'border-blue-200');
+                icon.className = "p-2 rounded-lg text-white bg-blue-600";
+                icon.innerHTML = '<i class="fa-solid fa-circle-info"></i>';
+            }
+
+            titleEl.innerText = title;
+            descEl.innerText = text;
+            
+            // Scroll dynamically to top to see alert
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function closeAlert() {
+            document.getElementById('statusAlert').classList.add('hidden');
+        }
+
+        function resetApp() {
+            if(confirm("คุณต้องการจำลองรีเซ็ตข้อมูลและประวัติกระเป๋าตังใหม่ทั้งหมดหรือไม่?")) {
+                location.reload();
+            }
+        }
+    </script>
+</body>
+</html>
